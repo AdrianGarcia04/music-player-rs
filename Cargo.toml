@@ -4,6 +4,8 @@ version = "0.1.0"
 authors = ["Adrián García Pérez <adrian.garcia04@ciencias.unam.mx>"]
 
 [dependencies]
+dirs = "1.0.4"
+id3 = "0.2.5"
 
 [[bin]]
 name = "musicplayer"
