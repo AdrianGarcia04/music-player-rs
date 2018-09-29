@@ -1,0 +1,10 @@
+[package]
+name = "music_player_rs"
+version = "0.1.0"
+authors = ["Adrián García Pérez <adrian.garcia04@ciencias.unam.mx>"]
+
+[dependencies]
+
+[[bin]]
+name = "musicplayer"
+path = "src/music_player.rs"
