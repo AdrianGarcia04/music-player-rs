@@ -1,3 +1,5 @@
+extern crate dirs;
+
 pub mod music_manager;
 
 #[cfg(test)]
