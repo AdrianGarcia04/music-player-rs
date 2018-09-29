@@ -1,10 +1,11 @@
 extern crate dirs;
 
+use super::{music_file::MusicFile};
 use std::{io, path, fs, fs::DirEntry, slice::Iter};
 
 pub struct FileManager {
     directory: path::PathBuf,
-    music_files: Vec<path::PathBuf>,
+    music_files: Vec<MusicFile>,
 }
 
 impl FileManager {
@@ -27,7 +28,7 @@ impl FileManager {
         }
     }
 
-    pub fn songs(&self) -> Iter<path::PathBuf>{
+    pub fn songs(&self) -> Iter<MusicFile>{
         self.music_files.iter()
     }
 
@@ -44,7 +45,7 @@ impl FileManager {
         }
     }
 
-    pub fn search_songs(&mut self) -> Result<(), io::Error>{
+    pub fn search_songs(&mut self) -> Result<(), io::Error> {
         match fs::read_dir(&self.directory) {
             Ok(files) => {
                 for file in files {
@@ -58,14 +59,28 @@ impl FileManager {
         }
     }
 
+    pub fn search_songs_from_dir(&mut self, directory: &str) -> Result<(), io::Error> {
+        match fs::read_dir(directory) {
+            Ok(files) => {
+                for file in files {
+                    self.save_file(file?);
+                }
+                Ok(())
+            },
+            Err(e) => {
+                Err(e)
+            }
+        }
+    }
+
     fn save_file(&mut self, file: DirEntry) {
-        let file_path_buf = file.path();
-        let file_path_buf_clone = file_path_buf.clone();
-        let file_path = file_path_buf.as_path();
-        match file_path.extension() {
+        let path = file.path();
+        let path_clone = path.clone();
+
+        match path_clone.as_path().extension() {
             Some(extension) => {
                 if extension.eq("mp3") {
-                    self.music_files.push(file_path_buf_clone);
+                    self.music_files.push(MusicFile::from_path(path));
                 }
             },
             None => {}

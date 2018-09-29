@@ -7,6 +7,6 @@ fn main() {
     file_manager.search_songs().unwrap();
 
     for song in file_manager.songs() {
-        println!("{:?}", song);
+        println!("{}", song);
     }
 }

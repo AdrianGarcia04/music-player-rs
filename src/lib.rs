@@ -1,4 +1,5 @@
 extern crate dirs;
+extern crate id3;
 
 pub mod music_manager;
 
