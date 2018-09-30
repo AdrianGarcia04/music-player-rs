@@ -1,3 +1,4 @@
+use super::{music_file::MusicFile};
 use postgres::{Connection, TlsMode, error, types::ToSql, rows::Rows};
 use std::io::{Error, ErrorKind};
 type PostgresError = error::Error;
@@ -48,7 +49,7 @@ impl MusicDatabase {
             Some(ref host) => host,
             None => "0.0.0.0",
         };
-        let connection_URL = format!("postgresql://{}:{}@{}", username, password, host);
+        let connection_URL = format!("postgresql://{}:{}@{}/media_player", username, password, host);
         self.connection = Some(Connection::connect(connection_URL, TlsMode::None)?);
         Ok(())
     }
@@ -83,4 +84,34 @@ impl MusicDatabase {
             }
         }
     }
+
+    pub fn save_song(&self, song: &MusicFile) -> Result<(), PostgresError > {
+        let values = self.song_as_values(&song);
+        let query = format!("INSERT INTO song (artist_id, album_id, genre_id, disc_id, title, \
+            lyrics, year, duration, date_recorded, date_released) VALUES {};", values);
+        println!("{:?}", query);
+        self.query(&query, &[])?;
+        Ok(())
+    }
+
+    fn song_as_values(&self, song: &MusicFile) -> String {
+        let artist_id = self.foreign_key(&song, "artist", "name", &song.artist());
+        let album_id = self.foreign_key(&song, "album", "name", &song.album());
+        let genre_id = self.foreign_key(&song, "genre", "name", &song.genre());
+        let disc_id = self.foreign_key(&song, "disc", "name", &song.disc());
+        format!("({}, {}, {}, {}, {})", artist_id, album_id, genre_id, disc_id, song.to_string())
+    }
+
+    fn foreign_key(&self, song: &MusicFile, table: &str, column: &str, column_value: &str) -> String {
+        let query = format!("SELECT id FROM {} WHERE {}='{}'", table, column, column_value);
+        let rows = self.query(&query, &[]).unwrap();
+        if rows.is_empty() {
+            String::from("null")
+        }
+        else {
+            let id: i32 = rows.get(0).get("id");
+            id.to_string()
+        }
+    }
+
 }
