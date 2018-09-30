@@ -28,7 +28,7 @@ impl FileManager {
         }
     }
 
-    pub fn songs(&self) -> Iter<MusicFile>{
+    pub fn songs(&self) -> Iter<MusicFile> {
         self.music_files.iter()
     }
 
