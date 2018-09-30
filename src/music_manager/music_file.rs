@@ -1,4 +1,4 @@
-use std::{path, fmt, string};
+use std::{path};
 use id3::{Tag};
 
 pub struct MusicFile {
@@ -50,6 +50,10 @@ impl MusicFile {
         }
     }
 
+    pub fn path(&self) -> String {
+        format!("'{:?}'", self.path)
+    }
+
     pub fn lyrics(&self) -> String {
         let mut lyrics = self.tag.lyrics();
         match lyrics.next() {
@@ -84,17 +88,5 @@ impl MusicFile {
             Some(date_released) => date_released.to_string(),
             None => String::from("null")
         }
-    }
-}
-
-impl fmt::Display for MusicFile {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let title = self.title();
-        let lyrics = self.lyrics();
-        let year = self.year();
-        let duration = self.duration();
-        let date_recorded = self.date_recorded();
-        let date_released = self.date_released();
-        write!(f, "{}, {}, {}, {}, {}, {}", title, lyrics, year, duration, date_recorded, date_released)
     }
 }

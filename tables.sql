@@ -25,6 +25,7 @@ CREATE TABLE song (
         genre_id INTEGER REFERENCES genre(id),
         disc_id INTEGER REFERENCES disc(id),
         title VARCHAR(60),
+        path VARCHAR(100),
         lyrics TEXT,
         year INTEGER,
         duration INTEGER,
