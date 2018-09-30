@@ -1,5 +1,6 @@
 extern crate dirs;
 extern crate id3;
+extern crate postgres;
 
 pub mod music_manager;
 
