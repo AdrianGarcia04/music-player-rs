@@ -1,6 +1,10 @@
-use super::{music_file::MusicFile};
+pub mod file_manager;
+pub mod music_file;
+
+use self::{music_file::MusicFile, file_manager::FileManager};
 use postgres::{Connection, TlsMode, error, types::ToSql, rows::Rows};
-use std::io::{Error, ErrorKind};
+use std::{io::{Error, ErrorKind}, slice::Iter};
+
 type PostgresError = error::Error;
 
 pub struct MusicDatabase {
@@ -9,6 +13,7 @@ pub struct MusicDatabase {
     password: Option<String>,
     host: Option<String>,
     database: Option<String>,
+    file_manager: FileManager,
 }
 
 impl MusicDatabase {
@@ -20,6 +25,7 @@ impl MusicDatabase {
             password: None,
             host: None,
             database: None,
+            file_manager: FileManager::new()
         }
     }
 
@@ -41,6 +47,18 @@ impl MusicDatabase {
     pub fn with_database(&mut self, database: &str) -> &mut MusicDatabase {
         self.database = Some(database.to_owned());
         self
+    }
+
+    pub fn save_songs(&mut self) -> Result<(), Error>{
+        self.file_manager.search_songs()?;
+        for song in self.file_manager.songs() {
+            self.save_song(song)?;
+        }
+        Ok(())
+    }
+
+    pub fn songs(&self) -> Iter<MusicFile> {
+        self.file_manager.songs()
     }
 
     pub fn connect(&mut self) -> Result<(), PostgresError> {

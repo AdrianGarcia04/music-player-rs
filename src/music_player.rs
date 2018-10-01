@@ -1,17 +1,12 @@
 extern crate music_player_rs;
 
-use music_player_rs::music_manager::{file_manager, music_database};
+use music_player_rs::music_manager::{music_database::MusicDatabase};
 
 fn main() {
-    let mut file_manager = file_manager::FileManager::new();
-    file_manager.search_songs().unwrap();
-
-    let mut music_database = music_database::MusicDatabase::new();
+    let mut music_database = MusicDatabase::new();
     music_database.connect().unwrap();
-
-    for song in file_manager.songs() {
-        println!("{:?}", music_database.save_song(song));
+    match music_database.save_songs() {
+        Ok(_) => {},
+        Err(e) => println!("{:?}", e)
     }
-
-
 }
