@@ -46,6 +46,7 @@ impl FileManager {
     }
 
     pub fn search_songs(&mut self) -> Result<(), io::Error> {
+        info!(target: "FileManager", "Searching songs in {:?}", self.directory);
         match fs::read_dir(&self.directory) {
             Ok(files) => {
                 for file in files {
@@ -60,6 +61,7 @@ impl FileManager {
     }
 
     pub fn search_songs_from_dir(&mut self, directory: &str) -> Result<(), io::Error> {
+        info!(target: "FileManager", "Searching songs in {:?}", self.directory);
         match fs::read_dir(directory) {
             Ok(files) => {
                 for file in files {
@@ -80,7 +82,11 @@ impl FileManager {
         match path_clone.as_path().extension() {
             Some(extension) => {
                 if extension.eq("mp3") {
+                    info!(target: "FileManager", "Found song {:?}", path.clone());
                     self.music_files.push(MusicFile::from_path(path));
+                }
+                else {
+                    info!(target: "FileManager", "Ignoring {:?}", path.clone());
                 }
             },
             None => {}
