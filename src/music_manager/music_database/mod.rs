@@ -79,7 +79,9 @@ impl MusicDatabase {
             None => "music_player_rs",
         };
         let connection_url = format!("postgresql://{}:{}@{}/{}", username, password, host, database);
+        info!(target: "MusicDatabase", "Connecting to {}", connection_url);
         self.connection = Some(Connection::connect(connection_url, TlsMode::None)?);
+        info!(target: "MusicDatabase", "Succesfully connected to database");
         Ok(())
     }
 
@@ -118,6 +120,7 @@ impl MusicDatabase {
         let values = self.song_as_values(&song);
         let query = format!("INSERT INTO song (artist_id, album_id, genre_id, disc_id, title, \
             path, lyrics, year, duration, date_recorded, date_released) VALUES {};", values);
+        info!(target: "MusicDatabase", "Inserting {}", song.title());
         self.query(&query, &[])?;
         Ok(())
     }
