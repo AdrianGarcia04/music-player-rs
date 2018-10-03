@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate log;
+
 extern crate dirs;
 extern crate id3;
 extern crate postgres;

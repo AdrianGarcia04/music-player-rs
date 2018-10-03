@@ -12,4 +12,8 @@ Cargo.lock
 /target
 **/*.rs.bk
 Cargo.lock
+
 /test_songs/
+
+# Log files
+*.log

@@ -1,35 +1,58 @@
-CREATE TABLE artist (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(60)
+CREATE TABLE types (
+        id_type         SERIAL PRIMARY KEY,
+        description     TEXT
 );
 
-CREATE TABLE album (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(60)
+INSERT INTO types VALUES(0, 'Person');
+INSERT INTO types VALUES(1, 'Group');
+INSERT INTO types VALUES(2, 'Unknown');
+
+CREATE TABLE performers (
+        id_performer    SERIAL PRIMARY KEY,
+        id_type         INTEGER,
+        name            TEXT,
+        FOREIGN KEY     (id_type) REFERENCES types(id_type)
 );
 
-CREATE TABLE genre (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(20)
+CREATE TABLE persons (
+        id_person       SERIAL PRIMARY KEY,
+        stage_name      TEXT,
+        real_name       TEXT,
+        birth_date      TEXT,
+        death_date      TEXT
 );
 
-CREATE TABLE disc (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(20)
+CREATE TABLE groups (
+        id_group        SERIAL PRIMARY KEY,
+        name            TEXT,
+        start_date      TEXT,
+        end_date        TEXT
 );
 
-CREATE TABLE song (
-        id SERIAL PRIMARY KEY,
-        artist_id INTEGER REFERENCES artist(id),
-        album_id INTEGER REFERENCES album(id),
-        genre_id INTEGER REFERENCES genre(id),
-        disc_id INTEGER REFERENCES disc(id),
-        title VARCHAR(60),
-        path VARCHAR(100),
-        lyrics TEXT,
-        year INTEGER,
-        duration INTEGER,
-        date_recorded TIMESTAMP,
-        date_released TIMESTAMP,
-                UNIQUE(title)
+CREATE TABLE albums (
+        id_album        SERIAL PRIMARY KEY,
+        path            TEXT,
+        name            TEXT,
+        year            INTEGER
+);
+
+CREATE TABLE rolas (
+        id_rola         SERIAL PRIMARY KEY,
+        id_performer    INTEGER,
+        id_album        INTEGER,
+        path            TEXT,
+        title           TEXT,
+        track           INTEGER,
+        year            INTEGER,
+        genre           TEXT,
+        FOREIGN KEY     (id_performer) REFERENCES performers(id_performer),
+        FOREIGN KEY     (id_album) REFERENCES albums(id_album)
+);
+
+CREATE TABLE in_group (
+        id_person       INTEGER,
+        id_group        INTEGER,
+        PRIMARY KEY     (id_person, id_group),
+        FOREIGN KEY     (id_person) REFERENCES persons(id_person),
+        FOREIGN KEY     (id_group) REFERENCES groups(id_group)
 );

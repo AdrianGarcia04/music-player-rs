@@ -7,6 +7,9 @@ authors = ["Adrián García Pérez <adrian.garcia04@ciencias.unam.mx>"]
 dirs = "1.0.4"
 id3 = "0.2.5"
 postgres = "0.15.2"
+log = "0.4.5"
+simplelog = "0.5.2"
+clap = "2.32.0"
 
 [[bin]]
 name = "musicplayer"
