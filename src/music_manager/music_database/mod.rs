@@ -121,8 +121,10 @@ impl MusicDatabase {
 
     fn save_albums(&mut self) -> Result<(), PostgresError>{
         for album in self.file_manager.albums() {
-            let query = format!("INSERT INTO albums (path, name, year) VALUES ('{:?}', '{:?}', 2018);",
-                album, album.file_name().unwrap());
+            let album_path = album.to_str().unwrap().to_string();
+            let album_name = String::from(album.file_name().unwrap().to_str().unwrap());
+            let query = format!("INSERT INTO albums (path, name, year) VALUES ('{}', '{}', 2018);",
+                album_path, album_name);
             info!(target: "MusicDatabase", "Saving album: {:?}", album.file_name());
             self.query(&query, &[])?;
         }
@@ -135,7 +137,7 @@ impl MusicDatabase {
                 Some(performer) => performer,
                 None => "Unknown",
             };
-            let query = format!("INSERT INTO performers (id_type, name) VALUES (2, '{:?}');",
+            let query = format!("INSERT INTO performers (id_type, name) VALUES (2, '{}');",
                 performer);
             info!(target: "MusicDatabase", "Saving performer: {:?}", performer);
             self.query(&query, &[])?;
@@ -188,12 +190,12 @@ impl MusicDatabase {
             Some(genre) => genre,
             None => "Unknown",
         };
-        format!("({}, {}, {}, '{}', {}, {}, '{}')", id_performer, id_album, path, title, track,
+        format!("({}, {}, '{}', '{}', {}, {}, '{}')", id_performer, id_album, path, title, track,
         date_recorded.to_string(), genre)
     }
 
     fn foreign_key(&self, table: &str, column: &str, column_value: &str) -> String {
-        let query = format!("SELECT id_{} FROM {}s WHERE {}='\"{}\"';", table, table, column, column_value);
+        let query = format!("SELECT id_{} FROM {}s WHERE {}='{}';", table, table, column, column_value);
         let rows = self.query(&query, &[]).unwrap();
         if rows.is_empty() {
             self.insert_and_get_id(table, column, column_value)

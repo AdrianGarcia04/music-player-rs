@@ -27,7 +27,7 @@ impl MusicFile {
     }
 
     pub fn path(&self) -> String {
-        format!("'{:?}'", self.path)
+        self.path.to_str().unwrap().to_string()
     }
 
     pub fn artist(&self) -> &Option<String> {
