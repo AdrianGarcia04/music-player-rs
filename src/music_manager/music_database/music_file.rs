@@ -1,52 +1,28 @@
 use std::{path};
-use id3::{Tag};
+use id3::{Tag, Timestamp};
 
 pub struct MusicFile {
     path: path::PathBuf,
-    tag: Tag,
+    artist: Option<String>,
+    title: Option<String>,
+    album: Option<String>,
+    date_recorded: Option<Timestamp>,
+    genre: Option<String>,
+    track: Option<u32>,
 }
 
 impl MusicFile {
 
     pub fn from_path(path: path::PathBuf) -> MusicFile {
+        let tag = Tag::read_from_path(path.clone()).unwrap();
         MusicFile {
-            path: path.clone(),
-            tag: Tag::read_from_path(path).unwrap(),
-        }
-    }
-
-    pub fn artist(&self) -> String {
-        match self.tag.artist() {
-            Some(artist) => artist.to_owned(),
-            None => String::from("")
-        }
-    }
-
-    pub fn album(&self) -> String {
-        match self.tag.album() {
-            Some(album) => album.to_owned(),
-            None => String::from("")
-        }
-    }
-
-    pub fn genre(&self) -> String {
-        match self.tag.genre() {
-            Some(genre) => genre.to_owned(),
-            None => String::from("")
-        }
-    }
-
-    pub fn disc(&self) -> String {
-        match self.tag.disc() {
-            Some(disc) => disc.to_string(),
-            None => String::from("")
-        }
-    }
-
-    pub fn title(&self) -> String {
-        match self.tag.title() {
-            Some(title) => format!("'{}'", title),
-            None => String::from("null")
+            path: path,
+            artist: tag.artist().map(str::to_string),
+            title: tag.title().map(str::to_string),
+            album: tag.album().map(str::to_string),
+            date_recorded: tag.date_recorded(),
+            genre: tag.genre().map(str::to_string),
+            track: tag.track(),
         }
     }
 
@@ -54,39 +30,28 @@ impl MusicFile {
         format!("'{:?}'", self.path)
     }
 
-    pub fn lyrics(&self) -> String {
-        let mut lyrics = self.tag.lyrics();
-        match lyrics.next() {
-            Some(ref lyrics) => format!("'{}'", lyrics.text),
-            None => String::from("null")
-        }
+    pub fn artist(&self) -> &Option<String> {
+        &self.artist
     }
 
-    pub fn year(&self) -> String {
-        match self.tag.year() {
-            Some(year) => year.to_string(),
-            None => String::from("null")
-        }
+    pub fn title(&self) -> &Option<String> {
+        &self.title
     }
 
-    pub fn duration(&self) -> String {
-        match self.tag.duration() {
-            Some(duration) => duration.to_string(),
-            None => String::from("null")
-        }
+    pub fn album(&self) -> &Option<String> {
+        &self.album
     }
 
-    pub fn date_recorded(&self) -> String {
-        match self.tag.date_recorded() {
-            Some(date_recorded) => date_recorded.to_string(),
-            None => String::from("null")
-        }
+    pub fn date_recorded(&self) -> &Option<Timestamp> {
+        &self.date_recorded
     }
 
-    pub fn date_released(&self) -> String {
-        match self.tag.date_released() {
-            Some(date_released) => date_released.to_string(),
-            None => String::from("null")
-        }
+    pub fn genre(&self) -> &Option<String> {
+        &self.genre
     }
+
+    pub fn track(&self) -> &Option<u32> {
+        &self.track
+    }
+
 }

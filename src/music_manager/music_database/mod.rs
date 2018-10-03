@@ -4,6 +4,7 @@ pub mod music_file;
 use self::{music_file::MusicFile, file_manager::FileManager};
 use postgres::{Connection, TlsMode, error, types::ToSql, rows::Rows};
 use std::{io::{Error, ErrorKind}, slice::Iter};
+use id3::Timestamp;
 
 type PostgresError = error::Error;
 
@@ -49,8 +50,10 @@ impl MusicDatabase {
         self
     }
 
-    pub fn save_songs(&mut self) -> Result<(), Error>{
+    pub fn mine(&mut self) -> Result<(), Error>{
         self.file_manager.search_songs()?;
+        self.save_albums()?;
+        self.save_performers()?;
         for song in self.file_manager.songs() {
             self.save_song(song)?;
         }
@@ -116,47 +119,97 @@ impl MusicDatabase {
         }
     }
 
-    pub fn save_song(&self, song: &MusicFile) -> Result<(), PostgresError > {
+    fn save_albums(&mut self) -> Result<(), PostgresError>{
+        for album in self.file_manager.albums() {
+            let query = format!("INSERT INTO albums (path, name, year) VALUES ('{:?}', '{:?}', 2018);",
+                album, album.file_name().unwrap());
+            info!(target: "MusicDatabase", "Saving album: {:?}", album.file_name());
+            self.query(&query, &[])?;
+        }
+        Ok(())
+    }
+
+    fn save_performers(&mut self) -> Result<(), PostgresError>{
+        for song in self.file_manager.songs() {
+            let performer = match song.artist() {
+                Some(performer) => performer,
+                None => "Unknown",
+            };
+            let query = format!("INSERT INTO performers (id_type, name) VALUES (2, '{:?}');",
+                performer);
+            info!(target: "MusicDatabase", "Saving performer: {:?}", performer);
+            self.query(&query, &[])?;
+
+        }
+        Ok(())
+    }
+
+    pub fn save_song(&self, song: &MusicFile) -> Result<(), PostgresError> {
         let values = self.song_as_values(&song);
-        let query = format!("INSERT INTO song (artist_id, album_id, genre_id, disc_id, title, \
-            path, lyrics, year, duration, date_recorded, date_released) VALUES {};", values);
-        info!(target: "MusicDatabase", "Inserting {}", song.title());
+        let title = match song.title() {
+            Some(title) => title,
+            None => "",
+        };
+        let query = format!("INSERT INTO rolas (id_performer, id_album, path, title, track, year, \
+        genre) VALUES {};", values);
+        info!(target: "MusicDatabase", "Inserting {}", title);
         self.query(&query, &[])?;
         Ok(())
     }
 
     fn song_as_values(&self, song: &MusicFile) -> String {
-        let artist_id = self.foreign_key("artist", "name", &song.artist());
-        let album_id = self.foreign_key("album", "name", &song.album());
-        let genre_id = self.foreign_key("genre", "name", &song.genre());
-        let disc_id = self.foreign_key("disc", "name", &song.disc());
-        let title = song.title();
+        let performer = match song.artist() {
+            Some(performer) => performer,
+            None => "",
+        };
+        let id_performer = self.foreign_key("performer", "name", &performer);
+
+        let album = match song.album() {
+            Some(album) => album,
+            None => "",
+        };
+        let id_album = self.foreign_key("album", "name", &album);
+
         let path = song.path();
-        let lyrics = song.lyrics();
-        let year = song.year();
-        let duration = song.duration();
-        let date_recorded = song.date_recorded();
-        let date_released = song.date_released();
-        format!("({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})", artist_id, album_id, genre_id,
-            disc_id, title, path, lyrics, year, duration, date_recorded, date_released)
+        let title = match song.title() {
+            Some(title) => title,
+            None => "",
+        };
+        let track = match song.track() {
+            Some(track) => track,
+            None => &0,
+        };
+        let date_recorded = match song.date_recorded() {
+            Some(date_recorded) => date_recorded,
+            None => &Timestamp{ year: 2018, month: None, day: None, hour: None, minute: None,
+                second: None },
+        };
+        let genre = match song.genre() {
+            Some(genre) => genre,
+            None => "Unknown",
+        };
+        format!("({}, {}, {}, '{}', {}, {}, '{}')", id_performer, id_album, path, title, track,
+        date_recorded.to_string(), genre)
     }
 
     fn foreign_key(&self, table: &str, column: &str, column_value: &str) -> String {
-        let query = format!("SELECT id FROM {} WHERE {}='{}'", table, column, column_value);
+        let query = format!("SELECT id_{} FROM {}s WHERE {}='\"{}\"';", table, table, column, column_value);
         let rows = self.query(&query, &[]).unwrap();
         if rows.is_empty() {
             self.insert_and_get_id(table, column, column_value)
         }
         else {
-            let id: i32 = rows.get(0).get("id");
+            let table = format!("id_{}", table);
+            let id: i32 = rows.get(0).get(&table[..]);
             id.to_string()
         }
     }
 
     fn insert_and_get_id(&self, table: &str, column: &str, column_value: &str) -> String {
-        let query = format!("INSERT INTO {} ({}) VALUES ('{}') RETURNING id", table, column, column_value);
+        let query = format!("INSERT INTO {}s ({}) VALUES ('{}') RETURNING id_{}", table, column, column_value, table);
         let rows = self.query(&query, &[]).unwrap();
-        let id: i32 = rows.get(0).get("id");
+        let table = format!("id_{}", table);
+        let id: i32 = rows.get(0).get(&table[..]);
         id.to_string()
     }
 

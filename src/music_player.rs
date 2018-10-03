@@ -46,5 +46,8 @@ fn main() {
 
     let mut music_database = MusicDatabase::new();
     music_database.connect().unwrap();
-    music_database.save_songs();
+    match music_database.mine() {
+        Ok(_) => {},
+        Err(e) => println!("{:?}", e)
+    }
 }
