@@ -1,5 +1,5 @@
 CREATE TABLE types (
-        id_type         SERIAL PRIMARY KEY,
+        id_type         INTEGER PRIMARY KEY,
         description     TEXT
 );
 
@@ -8,14 +8,14 @@ INSERT INTO types VALUES(1, 'Group');
 INSERT INTO types VALUES(2, 'Unknown');
 
 CREATE TABLE performers (
-        id_performer    SERIAL PRIMARY KEY,
+        id_performer    INTEGER PRIMARY KEY,
         id_type         INTEGER,
         name            TEXT,
         FOREIGN KEY     (id_type) REFERENCES types(id_type)
 );
 
 CREATE TABLE persons (
-        id_person       SERIAL PRIMARY KEY,
+        id_person       INTEGER PRIMARY KEY,
         stage_name      TEXT,
         real_name       TEXT,
         birth_date      TEXT,
@@ -23,21 +23,21 @@ CREATE TABLE persons (
 );
 
 CREATE TABLE groups (
-        id_group        SERIAL PRIMARY KEY,
+        id_group        INTEGER PRIMARY KEY,
         name            TEXT,
         start_date      TEXT,
         end_date        TEXT
 );
 
 CREATE TABLE albums (
-        id_album        SERIAL PRIMARY KEY,
+        id_album        INTEGER PRIMARY KEY,
         path            TEXT,
         name            TEXT,
         year            INTEGER
 );
 
 CREATE TABLE rolas (
-        id_rola         SERIAL PRIMARY KEY,
+        id_rola         INTEGER PRIMARY KEY,
         id_performer    INTEGER,
         id_album        INTEGER,
         path            TEXT,

@@ -2,19 +2,17 @@ pub mod file_manager;
 pub mod music_file;
 
 use self::{music_file::MusicFile, file_manager::FileManager};
-use postgres::{Connection, TlsMode, error, types::ToSql, rows::Rows};
-use std::{io::{Error, ErrorKind}, slice::Iter};
+use std::{slice::Iter, path::Path};
 use id3::Timestamp;
+use sqlite;
 
-type PostgresError = error::Error;
+type SQLiteError = sqlite::Error;
 
 pub struct MusicDatabase {
-    connection: Option<Connection>,
-    username: Option<String>,
-    password: Option<String>,
-    host: Option<String>,
+    connection: Option<sqlite::Connection>,
     database: Option<String>,
     file_manager: FileManager,
+    mine: bool
 }
 
 impl MusicDatabase {
@@ -22,27 +20,10 @@ impl MusicDatabase {
     pub fn new() -> MusicDatabase {
         MusicDatabase {
             connection: None,
-            username: None,
-            password: None,
-            host: None,
             database: None,
-            file_manager: FileManager::new()
+            file_manager: FileManager::new(),
+            mine: true
         }
-    }
-
-    pub fn with_username(&mut self, username: &str) -> &mut MusicDatabase {
-        self.username = Some(username.to_owned());
-        self
-    }
-
-    pub fn with_password(&mut self, password: &str) -> &mut MusicDatabase {
-        self.password = Some(password.to_owned());
-        self
-    }
-
-    pub fn with_host(&mut self, host: &str) -> &mut MusicDatabase {
-        self.host = Some(host.to_owned());
-        self
     }
 
     pub fn with_database(&mut self, database: &str) -> &mut MusicDatabase {
@@ -50,8 +31,8 @@ impl MusicDatabase {
         self
     }
 
-    pub fn mine(&mut self) -> Result<(), Error>{
-        self.file_manager.search_songs()?;
+    pub fn mine(&mut self) -> Result<(), SQLiteError>{
+        self.file_manager.search_songs().unwrap();
         self.save_albums()?;
         self.save_performers()?;
         for song in self.file_manager.songs() {
@@ -64,74 +45,59 @@ impl MusicDatabase {
         self.file_manager.songs()
     }
 
-    pub fn connect(&mut self) -> Result<(), PostgresError> {
-        let username = match self.username {
-            Some(ref username) => username,
-            None => "postgres",
-        };
-        let password = match self.password {
-            Some(ref password) => password,
-            None => "postgres",
-        };
-        let host = match self.host {
-            Some(ref host) => host,
-            None => "0.0.0.0",
-        };
+    pub fn connect(&mut self) -> Result<(), SQLiteError> {
         let database = match self.database {
-            Some(ref database) => database,
-            None => "music_player_rs",
+            Some(ref database) => &database[..],
+            None => "./music_player_rs.db",
         };
-        let connection_url = format!("postgresql://{}:{}@{}/{}", username, password, host, database);
-        info!(target: "MusicDatabase", "Connecting to {}", connection_url);
-        self.connection = Some(Connection::connect(connection_url, TlsMode::None)?);
+        let database_path = Path::new(database);
+        if database_path.exists() {
+            self.mine = false;
+        }
+        else {
+            self.mine = true;
+        }
+        info!(target: "MusicDatabase", "Connecting to {:?}", database_path);
+        self.connection = Some(sqlite::open(database_path)?);
         info!(target: "MusicDatabase", "Succesfully connected to database");
         Ok(())
     }
 
-    pub fn is_active(&self) -> bool {
+    fn connection(&self) -> Result<&sqlite::Connection, SQLiteError> {
         match self.connection {
-            Some(ref connection) => {
-                connection.is_active()
-            },
+            Some(ref connection) => Ok(connection),
             None => {
-                false
+                Err(SQLiteError {
+                    code: Some(1),
+                    message: Some(String::from("Not connected to database"))
+                })
             }
         }
     }
 
-    pub fn execute(&self, query: &str, params: &[&ToSql]) -> Result<u64, PostgresError> {
-        match self.connection {
-            Some(ref connection) => connection.execute(query, params),
-            None => {
-                let error = Error::new(ErrorKind::NotConnected, "Not connected to database");
-                Err(PostgresError::from(error))
-            }
-        }
+    pub fn execute(&self, query: &str) -> Result<(), SQLiteError> {
+        let connection = self.connection()?;
+        connection.execute(query)
     }
 
-    pub fn query(&self, query: &str, params: &[&ToSql]) -> Result<Rows, PostgresError> {
-        match self.connection {
-            Some(ref connection) => connection.query(query, params),
-            None => {
-                let error = Error::new(ErrorKind::NotConnected, "Not connected to database");
-                Err(PostgresError::from(error))
-            }
-        }
+    pub fn query(&self, query: &str) -> Result<sqlite::Cursor, SQLiteError> {
+        let connection = self.connection()?;
+        Ok(connection.prepare(query)?.cursor())
     }
 
-    fn save_albums(&mut self) -> Result<(), PostgresError>{
+    fn save_albums(&mut self) -> Result<(), SQLiteError>{
         for album in self.file_manager.albums() {
             let album_path = album.to_str().unwrap().to_string();
             let album_name = String::from(album.file_name().unwrap().to_str().unwrap());
             let query = format!("INSERT INTO albums (path, name, year) VALUES ('{}', '{}', 2018);",
                 album_path, album_name);
-            info!(target: "MusicDatabase", "Saving album: {:?}", album.file_name());
-            self.query(&query, &[])?;
+            info!(target: "MusicDatabase", "Inserting album {:?}", album.file_name().unwrap());
+            self.execute(&query)?;
         }
         Ok(())
     }
 
-    fn save_performers(&mut self) -> Result<(), PostgresError>{
+    fn save_performers(&mut self) -> Result<(), SQLiteError>{
         for song in self.file_manager.songs() {
             let performer = match song.artist() {
                 Some(performer) => performer,
@@ -139,14 +105,13 @@ impl MusicDatabase {
             };
             let query = format!("INSERT INTO performers (id_type, name) VALUES (2, '{}');",
                 performer);
-            info!(target: "MusicDatabase", "Saving performer: {:?}", performer);
-            self.query(&query, &[])?;
-
+            info!(target: "MusicDatabase", "Inserting performer {:?}", performer);
+            self.execute(&query)?;
         }
         Ok(())
     }
 
-    pub fn save_song(&self, song: &MusicFile) -> Result<(), PostgresError> {
+    fn save_song(&self, song: &MusicFile) -> Result<(), SQLiteError> {
         let values = self.song_as_values(&song);
         let title = match song.title() {
             Some(title) => title,
@@ -154,8 +119,8 @@ impl MusicDatabase {
         };
         let query = format!("INSERT INTO rolas (id_performer, id_album, path, title, track, year, \
         genre) VALUES {};", values);
-        info!(target: "MusicDatabase", "Inserting {}", title);
-        self.query(&query, &[])?;
+        info!(target: "MusicDatabase", "Inserting song {}", title);
+        self.execute(&query)?;
         Ok(())
     }
 
@@ -194,25 +159,28 @@ impl MusicDatabase {
         date_recorded.to_string(), genre)
     }
 
-    fn foreign_key(&self, table: &str, column: &str, column_value: &str) -> String {
-        let query = format!("SELECT id_{} FROM {}s WHERE {}='{}';", table, table, column, column_value);
-        let rows = self.query(&query, &[]).unwrap();
-        if rows.is_empty() {
-            self.insert_and_get_id(table, column, column_value)
+    fn foreign_key(&self, table: &str, column: &str, column_value: &str) -> i64 {
+        let query = format!("SELECT id_{} FROM {}s WHERE {} = '{}'", table, table, column, column_value);
+        let mut cursor = self.query(&query).unwrap();
+        if let Some(row) = cursor.next().unwrap() {
+            row[0].as_integer().unwrap()
         }
         else {
-            let table = format!("id_{}", table);
-            let id: i32 = rows.get(0).get(&table[..]);
-            id.to_string()
+            self.insert_and_get_id(table, column, column_value)
         }
     }
 
-    fn insert_and_get_id(&self, table: &str, column: &str, column_value: &str) -> String {
-        let query = format!("INSERT INTO {}s ({}) VALUES ('{}') RETURNING id_{}", table, column, column_value, table);
-        let rows = self.query(&query, &[]).unwrap();
-        let table = format!("id_{}", table);
-        let id: i32 = rows.get(0).get(&table[..]);
-        id.to_string()
+    fn insert_and_get_id(&self, table: &str, column: &str, column_value: &str) -> i64 {
+        let query = format!("INSERT INTO {}s ({}) VALUES ('{}');", table, column, column_value);
+        self.execute(&query).unwrap();
+        let query = format!("SELECT last_insert_rowid();");
+        let mut cursor = self.query(&query).unwrap();
+        if let Some(row) = cursor.next().unwrap() {
+            row[0].as_integer().unwrap()
+        }
+        else {
+            0
+        }
     }
 
 }

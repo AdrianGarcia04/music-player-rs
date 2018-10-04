@@ -3,7 +3,7 @@ extern crate log;
 
 extern crate dirs;
 extern crate id3;
-extern crate postgres;
+extern crate sqlite;
 
 pub mod music_manager;
 
