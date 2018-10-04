@@ -1,8 +1,9 @@
 pub mod file_manager;
 pub mod music_file;
+pub mod query_manager;
 
 use self::{music_file::MusicFile, file_manager::FileManager};
-use std::{slice::Iter, path::Path};
+use std::{slice::Iter, path::Path, collections::HashMap};
 use id3::Timestamp;
 use sqlite;
 
@@ -31,18 +32,38 @@ impl MusicDatabase {
         self
     }
 
-    pub fn mine(&mut self) -> Result<(), SQLiteError>{
-        self.file_manager.search_songs().unwrap();
-        self.save_albums()?;
-        self.save_performers()?;
-        for song in self.file_manager.songs() {
-            self.save_song(song)?;
+    pub fn mine(&mut self) -> Result<(), SQLiteError> {
+        if self.mine {
+            self.execute(&query_manager::create_database().unwrap())?;
+            self.file_manager.search_songs().unwrap();
+            self.save_albums()?;
+            self.save_performers()?;
+            for song in self.file_manager.songs() {
+                self.save_song(song)?;
+            }
         }
         Ok(())
     }
 
-    pub fn songs(&self) -> Iter<MusicFile> {
-        self.file_manager.songs()
+    pub fn songs(&self) -> Vec<HashMap<&str, String>> {
+        let query = format!("SELECT rolas.title, performers.name, albums.name, genre FROM rolas, \
+        performers, albums WHERE rolas.id_performer = performers.id_performer AND \
+        rolas.id_album = albums.id_album;");
+        let mut cursor = self.query(&query).unwrap();
+        let mut songs = Vec::new();
+        while let Some(row) = cursor.next().unwrap() {
+            let mut hashmap: HashMap<&str, String> = HashMap::new();
+            let title = row[0].as_string().unwrap();
+            let performer = row[1].as_string().unwrap();
+            let album = row[2].as_string().unwrap();
+            let genre = row[3].as_string().unwrap();
+            hashmap.insert("title", title.to_owned());
+            hashmap.insert("performer", performer.to_owned());
+            hashmap.insert("album", album.to_owned());
+            hashmap.insert("genre", genre.to_owned());
+            songs.push(hashmap);
+        }
+        songs
     }
 
     pub fn connect(&mut self) -> Result<(), SQLiteError> {

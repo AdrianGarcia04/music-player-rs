@@ -83,10 +83,10 @@ fn main() {
 
     let list_store: gtk::ListStore = gtk::ListStore::new(&[GTKString, GTKString, GTKString, GTKString]);
     for song in music_database.songs() {
-        let title = song.title().to_value();
-        let artist = song.artist().to_value();
-        let album = song.album().to_value();
-        let genre = song.genre().to_value();
+        let title = song.get("title").unwrap().to_value();
+        let artist = song.get("performer").unwrap().to_value();
+        let album = song.get("album").unwrap().to_value();
+        let genre = song.get("genre").unwrap().to_value();
         let data = [&title as &ToValue, &artist as &ToValue, &album as &ToValue, &genre as &ToValue];
         list_store.insert_with_values(None, &[0, 1, 2, 3], &data);
     }
