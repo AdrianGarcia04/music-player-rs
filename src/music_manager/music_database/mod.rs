@@ -4,10 +4,12 @@ pub mod music_file;
 use self::{music_file::MusicFile, file_manager::FileManager};
 use super::query_manager;
 use super::query_manager::{
+    TableColumn as TC,
     TableColumn::Rolas as Rolas,
     TableColumn::Performers as Performers,
     TableColumn::Albums as Albums,
     Conditional::Eq,
+    Conditional::EqVal,
 };
 use std::{path::Path, collections::HashMap};
 use id3::Timestamp;
@@ -62,9 +64,9 @@ impl MusicDatabase {
         while let Some(row) = cursor.next().unwrap() {
             let mut hashmap: HashMap<&str, String> = HashMap::new();
             let title = row[0].as_string().unwrap();
-            let performer = row[1].as_string().unwrap();
-            let album = row[2].as_string().unwrap();
-            let genre = row[3].as_string().unwrap();
+            let genre = row[1].as_string().unwrap();
+            let performer = row[2].as_string().unwrap();
+            let album = row[3].as_string().unwrap();
             hashmap.insert("title", title.to_owned());
             hashmap.insert("performer", performer.to_owned());
             hashmap.insert("album", album.to_owned());
@@ -189,7 +191,12 @@ impl MusicDatabase {
     }
 
     fn foreign_key(&self, table: &str, column: &str, column_value: &str) -> i64 {
-        let query = format!("SELECT id_{} FROM {}s WHERE {} = '{}'", table, table, column, column_value);
+        let column_query = format!("id_{}", table);
+        let select_table = TC::from_str(table, &column_query).unwrap();
+        let where_table_column = TC::from_str(table, column).unwrap();
+        let conditional = EqVal(where_table_column, column_value);
+
+        let query = query_manager::select(&[select_table], &[conditional]);
         let mut cursor = self.query(&query).unwrap();
         if let Some(row) = cursor.next().unwrap() {
             row[0].as_integer().unwrap()

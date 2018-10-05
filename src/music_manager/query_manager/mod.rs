@@ -1,4 +1,4 @@
-use std::{fs::File, io::{Read, Error}, collections::HashSet};
+use std::{fs::File, io::{Read, Error, ErrorKind}, collections::HashSet};
 
 pub fn select(columns: &[TableColumn], conditionals: &[Conditional]) -> String {
     let mut query = String::from("SELECT ");
@@ -13,7 +13,7 @@ pub fn select(columns: &[TableColumn], conditionals: &[Conditional]) -> String {
     query += " FROM ";
     query += &get_tables_from_columns(columns);
 
-    if conditionals.len() > 1 {
+    if conditionals.len() > 0 {
         query += " WHERE ";
 
         let mut conditionals_iter = conditionals.iter().peekable();
@@ -53,12 +53,14 @@ pub fn create_database() -> Result<String, Error> {
 
 pub enum Conditional<'a> {
     Eq(TableColumn<'a>, TableColumn<'a>),
+    EqVal(TableColumn<'a>, &'a str),
 }
 
 impl <'a> ToString for Conditional<'a> {
     fn to_string(&self) -> String {
         match self {
             Conditional::Eq(table1, table2) => format!("{} = {}", table1.to_string(), table2.to_string()),
+            Conditional::EqVal(table, value) => format!("{} = '{}'", table.to_string(), value),
         }
     }
 }
@@ -83,6 +85,19 @@ impl <'a> TableColumn<'a> {
             TableColumn::Albums(_) => "albums",
             TableColumn::Rolas(_) => "rolas",
             TableColumn::InGroup(_) => "in_group",
+        }
+    }
+
+    pub fn from_str(table: &'a str, column: &'a str) -> Result<TableColumn<'a>, Error> {
+        match table {
+            "types" | "type" => Ok(TableColumn::Types(column)),
+            "performers" | "performer" => Ok(TableColumn::Performers(column)),
+            "persons" | "person" => Ok(TableColumn::Persons(column)),
+            "groups" | "group" => Ok(TableColumn::Groups(column)),
+            "albums" | "album" => Ok(TableColumn::Albums(column)),
+            "rolas" | "rola" => Ok(TableColumn::Rolas(column)),
+            "in_group" => Ok(TableColumn::InGroup(column)),
+            _ => Err(Error::new(ErrorKind::Other, "Error parsing table"))
         }
     }
 }
