@@ -1,9 +1,15 @@
 pub mod file_manager;
 pub mod music_file;
-pub mod query_manager;
 
 use self::{music_file::MusicFile, file_manager::FileManager};
-use std::{slice::Iter, path::Path, collections::HashMap};
+use super::query_manager;
+use super::query_manager::{
+    TableColumn::Rolas as Rolas,
+    TableColumn::Performers as Performers,
+    TableColumn::Albums as Albums,
+    Conditional::Eq,
+};
+use std::{path::Path, collections::HashMap};
 use id3::Timestamp;
 use sqlite;
 
@@ -46,9 +52,11 @@ impl MusicDatabase {
     }
 
     pub fn songs(&self) -> Vec<HashMap<&str, String>> {
-        let query = format!("SELECT rolas.title, performers.name, albums.name, genre FROM rolas, \
-        performers, albums WHERE rolas.id_performer = performers.id_performer AND \
-        rolas.id_album = albums.id_album;");
+        let query = query_manager::select(
+            &[Rolas("title"), Rolas("genre"), Performers("name"), Albums("name")],
+            &[Eq(Rolas("id_performer"), Performers("id_performer")), Eq(Rolas("id_album"),
+                Albums("id_album"))]
+        );
         let mut cursor = self.query(&query).unwrap();
         let mut songs = Vec::new();
         while let Some(row) = cursor.next().unwrap() {
@@ -148,20 +156,20 @@ impl MusicDatabase {
     fn song_as_values(&self, song: &MusicFile) -> String {
         let performer = match song.artist() {
             Some(performer) => performer,
-            None => "",
+            None => "Unknown",
         };
         let id_performer = self.foreign_key("performer", "name", &performer);
 
         let album = match song.album() {
             Some(album) => album,
-            None => "",
+            None => "Unknown",
         };
         let id_album = self.foreign_key("album", "name", &album);
 
         let path = song.path();
         let title = match song.title() {
             Some(title) => title,
-            None => "",
+            None => "Unknown",
         };
         let track = match song.track() {
             Some(track) => track,
