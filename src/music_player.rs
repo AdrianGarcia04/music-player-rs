@@ -72,6 +72,15 @@ fn main() {
     let title_label: gtk::Label = builder.get_object("Title").unwrap();
     let album_label: gtk::Label = builder.get_object("Album").unwrap();
     let artist_label: gtk::Label = builder.get_object("Artist").unwrap();
+    let footer_box: gtk::Box = builder.get_object("FooterBox").unwrap();
+    let navbar_box: gtk::Box = builder.get_object("NavbarBox").unwrap();
+    let prev_button: gtk::Button = builder.get_object("PrevButton").unwrap();
+    let play_button: gtk::Button = builder.get_object("PlayButton").unwrap();
+    let next_button: gtk::Button = builder.get_object("NextButton").unwrap();
+    let album_button: gtk::Button = builder.get_object("AlbumButton").unwrap();
+    let performer_button: gtk::Button = builder.get_object("PerformerButton").unwrap();
+    let mine_button: gtk::Button = builder.get_object("MineButton").unwrap();
+    let search_entry: gtk::SearchEntry = builder.get_object("SearchBar").unwrap();
 
     album_image.set_from_file(Path::new("./src/ui/music_album.png"));
     window.connect_delete_event(|_, _| {
@@ -125,6 +134,12 @@ fn main() {
             None => artist_label.set_text("Unknown"),
         };
     });
+
+    set_style(&[navbar_box, footer_box]);
+    set_style(&[prev_button, play_button, next_button, album_button, performer_button, mine_button]);
+    set_style(&[search_entry]);
+    set_style(&[tree_view.clone()]);
+
     gtk::main();
 }
 
@@ -138,5 +153,21 @@ fn create_treeview_column(title: &str, num_column: i32) -> TreeViewColumn {
     view_column.pack_start(&cell_renderer, true);
     view_column.add_attribute(&cell_renderer, "text", num_column);
     view_column.set_sort_column_id(num_column);
+    if let Some(button) = view_column.get_button() {
+        let style_context = button.get_style_context().unwrap();
+        style_context.add_class("treeview_header");
+        style_context.add_class("white_letters");
+        set_style(&[button]);
+    };
     view_column
+}
+
+fn set_style<T: gtk::WidgetExt>(widgets: &[T]) {
+    let provider = gtk::CssProvider::new();
+    provider.load_from_path("./src/ui/style.css").unwrap();
+
+    for widget in widgets {
+        let style_context = widget.get_style_context().unwrap();
+        style_context.add_provider(&provider, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
+    }
 }
