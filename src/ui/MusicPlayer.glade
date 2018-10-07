@@ -48,6 +48,8 @@
           <object class="GtkBox" id="NavbarBox">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
+            <property name="margin_top">3</property>
+            <property name="margin_bottom">3</property>
             <property name="homogeneous">True</property>
             <child>
               <object class="GtkButtonBox">
@@ -62,9 +64,6 @@
                     <property name="image">image1</property>
                     <property name="image_position">right</property>
                     <property name="always_show_image">True</property>
-                    <style>
-                      <class name="background_black"/>
-                    </style>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -81,9 +80,6 @@
                     <property name="image">image2</property>
                     <property name="image_position">right</property>
                     <property name="always_show_image">True</property>
-                    <style>
-                      <class name="background_black"/>
-                    </style>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -100,9 +96,6 @@
                     <property name="image">image3</property>
                     <property name="image_position">right</property>
                     <property name="always_show_image">True</property>
-                    <style>
-                      <class name="background_black"/>
-                    </style>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -119,9 +112,6 @@
                     <property name="image">image4</property>
                     <property name="image_position">right</property>
                     <property name="always_show_image">True</property>
-                    <style>
-                      <class name="background_black"/>
-                    </style>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -138,9 +128,6 @@
                     <property name="image">image5</property>
                     <property name="image_position">right</property>
                     <property name="always_show_image">True</property>
-                    <style>
-                      <class name="background_black"/>
-                    </style>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -157,9 +144,6 @@
                     <property name="image">image6</property>
                     <property name="image_position">right</property>
                     <property name="always_show_image">True</property>
-                    <style>
-                      <class name="background_black"/>
-                    </style>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -187,9 +171,7 @@
                     <property name="label" translatable="yes">Songs</property>
                     <attributes>
                       <attribute name="font-desc" value="Sans 11"/>
-                      <attribute name="weight" value="ultrabold"/>
-                      <attribute name="foreground" value="#ffffffffffff"/>
-                      <attribute name="gravity" value="west"/>
+                      <attribute name="weight" value="bold"/>
                     </attributes>
                   </object>
                   <packing>
@@ -202,9 +184,6 @@
                   <object class="GtkLabel" id="StatusLabel">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <attributes>
-                      <attribute name="foreground" value="#ffffffffffff"/>
-                    </attributes>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -226,10 +205,6 @@
                 <property name="primary_icon_name">edit-find-symbolic</property>
                 <property name="primary_icon_activatable">False</property>
                 <property name="primary_icon_sensitive">False</property>
-                <style>
-                  <class name="background_black"/>
-                  <class name="white_letters"/>
-                </style>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -237,9 +212,6 @@
                 <property name="position">2</property>
               </packing>
             </child>
-            <style>
-              <class name="background_black_light"/>
-            </style>
           </object>
           <packing>
             <property name="expand">False</property>
@@ -254,18 +226,12 @@
             <property name="shadow_type">in</property>
             <child>
               <object class="GtkTreeView" id="TreeView">
-                <property name="name">treeview</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="enable_grid_lines">vertical</property>
                 <child internal-child="selection">
                   <object class="GtkTreeSelection" id="TreeSelection"/>
                 </child>
-                <style>
-                  <class name="background_black"/>
-                  <class name="white_letters"/>
-                  <class name="treeview"/>
-                </style>
               </object>
             </child>
           </object>
@@ -282,7 +248,6 @@
             <property name="orientation">vertical</property>
             <child>
               <object class="GtkBox">
-                <property name="name">TimeBox</property>
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="margin_left">10</property>
@@ -330,9 +295,6 @@
                     <property name="position">2</property>
                   </packing>
                 </child>
-                <style>
-                  <class name="background_black_light"/>
-                </style>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -371,10 +333,8 @@
                         <property name="can_focus">False</property>
                         <property name="label" translatable="yes">Title</property>
                         <attributes>
-                          <attribute name="font-desc" value="Sans 13"/>
-                          <attribute name="weight" value="ultrabold"/>
-                          <attribute name="foreground" value="#ffffffffffff"/>
-                          <attribute name="gravity" value="west"/>
+                          <attribute name="font-desc" value="Sans 12"/>
+                          <attribute name="weight" value="bold"/>
                         </attributes>
                       </object>
                       <packing>
@@ -392,7 +352,6 @@
                           <attribute name="font-desc" value="Sans 10"/>
                           <attribute name="style" value="oblique"/>
                           <attribute name="weight" value="semilight"/>
-                          <attribute name="foreground" value="#ffffffffffff"/>
                         </attributes>
                       </object>
                       <packing>
@@ -408,7 +367,6 @@
                         <property name="label" translatable="yes">Artist</property>
                         <attributes>
                           <attribute name="font-desc" value="Sans 10"/>
-                          <attribute name="foreground" value="#ffffffffffff"/>
                         </attributes>
                       </object>
                       <packing>
@@ -424,9 +382,6 @@
                     <property name="position">1</property>
                   </packing>
                 </child>
-                <style>
-                  <class name="background_black_light"/>
-                </style>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -434,9 +389,6 @@
                 <property name="position">1</property>
               </packing>
             </child>
-            <style>
-              <class name="background_black_light"/>
-            </style>
           </object>
           <packing>
             <property name="expand">False</property>
