@@ -5,14 +5,56 @@ extern crate gtk;
 extern crate glib;
 
 use simplelog::{Level, LevelFilter, WriteLogger, Config};
-use std::{path::Path, fs::File};
+use std::{path::Path, fs::File, cell::RefCell, sync::mpsc};
 use clap::{Arg, App};
-use music_player_rs::music_manager::{miner::Miner, music_database::MusicDatabase};
+use music_player_rs::music_manager::{miner::{Miner, MinerEvent}, music_database::MusicDatabase};
 use gtk::prelude::*;
 use gtk::{WidgetExt, Inhibit, GtkWindowExt, ImageExt, TreeViewExt, TreeViewColumnExt,
     TreeViewColumn, GtkListStoreExtManual};
 
 use gtk::Type::String as GTKString;
+
+thread_local!(
+    static GLOBAL: RefCell<Option<(gtk::Label, mpsc::Receiver<MinerEvent>)>> = RefCell::new(None);
+    static DB: RefCell<Option<(gtk::ListStore, gtk::TreeView, MusicDatabase)>> = RefCell::new(None);
+);
+
+fn receive_percentage() -> glib::Continue {
+    GLOBAL.with(|global| {
+        if let Some((ref label, ref rx)) = *global.borrow() {
+            if let Ok(event) = rx.try_recv() {
+                match event {
+                    MinerEvent::Percentage(percentage) => {
+                        let text = format!("Mining: {:.2}%", percentage*100.0);
+                        label.set_text(&text);
+                        if percentage >= 100.0 {
+                            label.set_text("");
+                        }
+                    },
+                    _ => {},
+                }
+            }
+        }
+    });
+    glib::Continue(false)
+}
+
+fn database() -> glib::Continue {
+    DB.with(|db| {
+        if let Some((ref list_store, ref tree_view, ref database)) = *db.borrow() {
+            for song in database.songs() {
+                let title = song.get("title").unwrap().to_value();
+                let artist = song.get("performer").unwrap().to_value();
+                let album = song.get("album").unwrap().to_value();
+                let genre = song.get("genre").unwrap().to_value();
+                let data = [&title as &ToValue, &artist as &ToValue, &album as &ToValue, &genre as &ToValue];
+                list_store.insert_with_values(None, &[0, 1, 2, 3], &data);
+            }
+            tree_view.set_model(list_store);
+        }
+    });
+    glib::Continue(false)
+}
 
 fn main() {
     let matches = App::new("music player")
@@ -51,12 +93,6 @@ fn main() {
     let archivo_log = File::create(log_file).unwrap();
     WriteLogger::init(log_level, config, archivo_log).unwrap();
 
-    let mut miner = Miner::new();
-    miner.mine().unwrap();
-
-    let mut music_database = MusicDatabase::new();
-    music_database.connect().unwrap();
-
     if gtk::init().is_err() {
         println!("Error initialiazing GTK");
         return;
@@ -71,6 +107,7 @@ fn main() {
     let title_label: gtk::Label = builder.get_object("Title").unwrap();
     let album_label: gtk::Label = builder.get_object("Album").unwrap();
     let artist_label: gtk::Label = builder.get_object("Artist").unwrap();
+    let status_label: gtk::Label = builder.get_object("StatusLabel").unwrap();
     let _footer_box: gtk::Box = builder.get_object("FooterBox").unwrap();
     let _navbar_box: gtk::Box = builder.get_object("NavbarBox").unwrap();
     let _prev_button: gtk::Button = builder.get_object("PrevButton").unwrap();
@@ -81,6 +118,35 @@ fn main() {
     let _mine_button: gtk::Button = builder.get_object("MineButton").unwrap();
     let _search_entry: gtk::SearchEntry = builder.get_object("SearchBar").unwrap();
 
+    let mut miner = Miner::new();
+    let listener = miner.get_listener();
+    let listener_2 = miner.get_listener();
+    std::thread::spawn(move || {
+        miner.mine().unwrap();
+    });
+
+    GLOBAL.with(|global| {
+        *global.borrow_mut() = Some((status_label, listener))
+    });
+
+    let (tx_db, rx_db) = mpsc::channel();
+    std::thread::spawn(move || {
+        loop {
+            if let Ok(event) = listener_2.recv() {
+                match event {
+                    MinerEvent::Percentage(_) => {
+                        glib::idle_add(receive_percentage);
+                    },
+                    MinerEvent::Finished => {
+                        tx_db.send(true).unwrap();
+                        glib::idle_add(database);
+                    },
+                    _ => {},
+                }
+            }
+        }
+    });
+
     album_image.set_from_file(Path::new("./src/ui/music_album.png"));
     window.connect_delete_event(|_, _| {
         gtk::main_quit();
@@ -90,14 +156,6 @@ fn main() {
     window.show_all();
 
     let list_store: gtk::ListStore = gtk::ListStore::new(&[GTKString, GTKString, GTKString, GTKString]);
-    for song in music_database.songs() {
-        let title = song.get("title").unwrap().to_value();
-        let artist = song.get("performer").unwrap().to_value();
-        let album = song.get("album").unwrap().to_value();
-        let genre = song.get("genre").unwrap().to_value();
-        let data = [&title as &ToValue, &artist as &ToValue, &album as &ToValue, &genre as &ToValue];
-        list_store.insert_with_values(None, &[0, 1, 2, 3], &data);
-    }
 
     tree_view.append_column(&create_treeview_column("Title", 0));
     tree_view.append_column(&create_treeview_column("Artist", 1));
@@ -134,6 +192,22 @@ fn main() {
         };
     });
 
+    let tree_view_ = tree_view.clone();
+    let list_store_ = list_store.clone();
+    let mut music_database = MusicDatabase::new();
+    music_database.connect().unwrap();
+    DB.with(|db| {
+        *db.borrow_mut() = Some((list_store_, tree_view_, music_database))
+    });
+    // std::thread::spawn(move || {
+    //     loop {
+    //         if let Ok(miner_finished) = rx_db.recv() {
+    //             if miner_finished {
+    //                 println!("Miner Finished");
+    //             }
+    //         }
+    //     }
+    // });
     gtk::main();
 }
 
