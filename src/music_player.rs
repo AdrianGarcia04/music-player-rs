@@ -27,7 +27,7 @@ fn receive_percentage() -> glib::Continue {
                     MinerEvent::Percentage(percentage) => {
                         let text = format!("Mining: {:.2}%", percentage*100.0);
                         label.set_text(&text);
-                        if percentage >= 100.0 {
+                        if percentage >= 1.0 {
                             label.set_text("");
                         }
                     },
@@ -57,41 +57,7 @@ fn database() -> glib::Continue {
 }
 
 fn main() {
-    let matches = App::new("music player")
-                    .version("0.1")
-                    .author("Adrián G. <adrian.garcia04@ciencias.unam.mx>")
-                    .about("A music player written in Rust")
-                    .arg(Arg::with_name("log output")
-                        .short("o")
-                        .long("output")
-                        .value_name("FILE")
-                        .help("Log file")
-                        .takes_value(true))
-                    .arg(Arg::with_name("v")
-                        .short("v")
-                        .multiple(true)
-                        .help("Verbosity level"))
-                    .get_matches();
-
-    let log_file = matches.value_of("output").unwrap_or("music_player.log");
-
-    let log_level = match matches.occurrences_of("v") {
-        0 => LevelFilter::Off,
-        1 => LevelFilter::Info,
-        2 => LevelFilter::Warn,
-        3 | _ => LevelFilter::max(),
-    };
-
-    let config = Config {
-        time: Some(Level::Error),
-        level: Some(Level::Error),
-        target: Some(Level::Error),
-        location: Some(Level::Trace),
-        time_format: Some("%r"),
-    };
-
-    let archivo_log = File::create(log_file).unwrap();
-    WriteLogger::init(log_level, config, archivo_log).unwrap();
+    config();
 
     if gtk::init().is_err() {
         println!("Error initialiazing GTK");
@@ -108,8 +74,6 @@ fn main() {
     let album_label: gtk::Label = builder.get_object("Album").unwrap();
     let artist_label: gtk::Label = builder.get_object("Artist").unwrap();
     let status_label: gtk::Label = builder.get_object("StatusLabel").unwrap();
-    let _footer_box: gtk::Box = builder.get_object("FooterBox").unwrap();
-    let _navbar_box: gtk::Box = builder.get_object("NavbarBox").unwrap();
     let _prev_button: gtk::Button = builder.get_object("PrevButton").unwrap();
     let _play_button: gtk::Button = builder.get_object("PlayButton").unwrap();
     let _next_button: gtk::Button = builder.get_object("NextButton").unwrap();
@@ -199,16 +163,45 @@ fn main() {
     DB.with(|db| {
         *db.borrow_mut() = Some((list_store_, tree_view_, music_database))
     });
-    // std::thread::spawn(move || {
-    //     loop {
-    //         if let Ok(miner_finished) = rx_db.recv() {
-    //             if miner_finished {
-    //                 println!("Miner Finished");
-    //             }
-    //         }
-    //     }
-    // });
     gtk::main();
+}
+
+fn config() {
+    let matches = App::new("music player")
+                    .version("0.1")
+                    .author("Adrián G. <adrian.garcia04@ciencias.unam.mx>")
+                    .about("A music player written in Rust")
+                    .arg(Arg::with_name("log output")
+                        .short("o")
+                        .long("output")
+                        .value_name("FILE")
+                        .help("Log file")
+                        .takes_value(true))
+                    .arg(Arg::with_name("v")
+                        .short("v")
+                        .multiple(true)
+                        .help("Verbosity level"))
+                    .get_matches();
+
+    let log_file = matches.value_of("output").unwrap_or("music_player.log");
+
+    let log_level = match matches.occurrences_of("v") {
+        0 => LevelFilter::Off,
+        1 => LevelFilter::Info,
+        2 => LevelFilter::Warn,
+        3 | _ => LevelFilter::max(),
+    };
+
+    let config = Config {
+        time: Some(Level::Error),
+        level: Some(Level::Error),
+        target: Some(Level::Error),
+        location: Some(Level::Trace),
+        time_format: Some("%r"),
+    };
+
+    let archivo_log = File::create(log_file).unwrap();
+    WriteLogger::init(log_level, config, archivo_log).unwrap();
 }
 
 fn create_treeview_column(title: &str, num_column: i32) -> TreeViewColumn {

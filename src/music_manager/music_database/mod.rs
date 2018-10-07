@@ -93,7 +93,10 @@ impl MusicDatabase {
         songs
     }
 
-    pub fn save_album(&mut self, album: path::PathBuf) -> Result<(), SQLiteError>{
+    pub fn save_album(&mut self, album: path::PathBuf) -> Result<(), SQLiteError> {
+        if self.album_in_database(&album) {
+            return Ok(());
+        }
         let album_path = album.to_str().unwrap().to_string();
         let album_name = String::from(album.file_name().unwrap().to_str().unwrap());
         let query = format!("INSERT INTO albums (path, name, year) VALUES ('{}', '{}', 2018);",
@@ -104,18 +107,21 @@ impl MusicDatabase {
     }
 
     fn save_performer(&self, song: &MusicFile) -> Result<(), SQLiteError>{
-            let performer = match song.artist() {
-                Some(performer) => performer,
-                None => "Unknown",
-            };
-            let query = format!("INSERT INTO performers (id_type, name) VALUES (2, '{}');",
-                performer);
-            info!(target: "MusicDatabase", "Inserting performer {:?}", performer);
-            self.execute(&query)?;
+        let performer = match song.artist() {
+            Some(performer) => performer,
+            None => "Unknown",
+        };
+        let query = format!("INSERT INTO performers (id_type, name) VALUES (2, '{}');",
+            performer);
+        info!(target: "MusicDatabase", "Inserting performer {:?}", performer);
+        self.execute(&query)?;
         Ok(())
     }
 
     pub fn save_song(&self, song: MusicFile) -> Result<(), SQLiteError> {
+        if self.song_in_database(&song) {
+            return Ok(());
+        }
         self.save_performer(&song);
         let values = self.song_as_values(&song);
         let title = match song.title() {
@@ -191,6 +197,29 @@ impl MusicDatabase {
         else {
             0
         }
+    }
+
+    fn song_in_database(&self, song: &MusicFile) -> bool {
+        let title = match song.title() {
+            Some(title) => title,
+            None => "Unknown",
+        };
+        let query = query_manager::select(
+            &[Rolas("id_rola")],
+            &[EqVal(Rolas("title"), title)]
+        );
+        let mut cursor = self.query(&query).unwrap();
+        cursor.next().unwrap().is_some()
+    }
+
+    fn album_in_database(&self, album: &path::PathBuf) -> bool {
+        let album_path = album.to_str().unwrap().to_string();
+        let query = query_manager::select(
+            &[Albums("id_album")],
+            &[EqVal(Albums("path"), &album_path)]
+        );
+        let mut cursor = self.query(&query).unwrap();
+        cursor.next().unwrap().is_some()
     }
 
 }
