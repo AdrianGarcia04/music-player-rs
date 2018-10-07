@@ -1,8 +1,4 @@
-pub mod file_manager;
-pub mod music_file;
-
-use self::{music_file::MusicFile, file_manager::FileManager};
-use super::query_manager;
+use super::{query_manager, miner::music_file::MusicFile};
 use super::query_manager::{
     TableColumn as TC,
     TableColumn::Rolas as Rolas,
@@ -11,7 +7,7 @@ use super::query_manager::{
     Conditional::Eq,
     Conditional::EqVal,
 };
-use std::{path::Path, collections::HashMap};
+use std::{path, collections::HashMap};
 use id3::Timestamp;
 use sqlite;
 
@@ -20,8 +16,6 @@ type SQLiteError = sqlite::Error;
 pub struct MusicDatabase {
     connection: Option<sqlite::Connection>,
     database: Option<String>,
-    file_manager: FileManager,
-    mine: bool
 }
 
 impl MusicDatabase {
@@ -30,8 +24,6 @@ impl MusicDatabase {
         MusicDatabase {
             connection: None,
             database: None,
-            file_manager: FileManager::new(),
-            mine: true
         }
     }
 
@@ -40,57 +32,19 @@ impl MusicDatabase {
         self
     }
 
-    pub fn mine(&mut self) -> Result<(), SQLiteError> {
-        if self.mine {
-            self.execute(&query_manager::create_database().unwrap())?;
-            self.file_manager.search_songs().unwrap();
-            self.save_albums()?;
-            self.save_performers()?;
-            for song in self.file_manager.songs() {
-                self.save_song(song)?;
-            }
-        }
-        Ok(())
-    }
-
-    pub fn songs(&self) -> Vec<HashMap<&str, String>> {
-        let query = query_manager::select(
-            &[Rolas("title"), Rolas("genre"), Performers("name"), Albums("name")],
-            &[Eq(Rolas("id_performer"), Performers("id_performer")), Eq(Rolas("id_album"),
-                Albums("id_album"))]
-        );
-        let mut cursor = self.query(&query).unwrap();
-        let mut songs = Vec::new();
-        while let Some(row) = cursor.next().unwrap() {
-            let mut hashmap: HashMap<&str, String> = HashMap::new();
-            let title = row[0].as_string().unwrap();
-            let genre = row[1].as_string().unwrap();
-            let performer = row[2].as_string().unwrap();
-            let album = row[3].as_string().unwrap();
-            hashmap.insert("title", title.to_owned());
-            hashmap.insert("performer", performer.to_owned());
-            hashmap.insert("album", album.to_owned());
-            hashmap.insert("genre", genre.to_owned());
-            songs.push(hashmap);
-        }
-        songs
-    }
-
     pub fn connect(&mut self) -> Result<(), SQLiteError> {
         let database = match self.database {
             Some(ref database) => &database[..],
             None => "./music_player_rs.db",
         };
-        let database_path = Path::new(database);
-        if database_path.exists() {
-            self.mine = false;
-        }
-        else {
-            self.mine = true;
-        }
+        let database_path = path::Path::new(database);
+        let create_database = !database_path.exists();
         info!(target: "MusicDatabase", "Connecting to {:?}", database_path);
         self.connection = Some(sqlite::open(database_path)?);
         info!(target: "MusicDatabase", "Succesfully connected to database");
+        if create_database {
+            self.execute(&query_manager::create_database().unwrap())?;
+        }
         Ok(())
     }
 
@@ -116,20 +70,40 @@ impl MusicDatabase {
         Ok(connection.prepare(query)?.cursor())
     }
 
-    fn save_albums(&mut self) -> Result<(), SQLiteError>{
-        for album in self.file_manager.albums() {
-            let album_path = album.to_str().unwrap().to_string();
-            let album_name = String::from(album.file_name().unwrap().to_str().unwrap());
-            let query = format!("INSERT INTO albums (path, name, year) VALUES ('{}', '{}', 2018);",
-                album_path, album_name);
-            info!(target: "MusicDatabase", "Inserting album {:?}", album.file_name().unwrap());
-            self.execute(&query)?;
+    pub fn songs(&self) -> Vec<HashMap<&str, String>> {
+        let query = query_manager::select(
+            &[Rolas("title"), Rolas("genre"), Performers("name"), Albums("name")],
+            &[Eq(Rolas("id_performer"), Performers("id_performer")), Eq(Rolas("id_album"),
+                Albums("id_album"))]
+        );
+        let mut cursor = self.query(&query).unwrap();
+        let mut songs = Vec::new();
+        while let Some(row) = cursor.next().unwrap() {
+            let mut hashmap: HashMap<&str, String> = HashMap::new();
+            let title = row[0].as_string().unwrap();
+            let genre = row[1].as_string().unwrap();
+            let performer = row[2].as_string().unwrap();
+            let album = row[3].as_string().unwrap();
+            hashmap.insert("title", title.to_owned());
+            hashmap.insert("performer", performer.to_owned());
+            hashmap.insert("album", album.to_owned());
+            hashmap.insert("genre", genre.to_owned());
+            songs.push(hashmap);
         }
+        songs
+    }
+
+    pub fn save_album(&mut self, album: path::PathBuf) -> Result<(), SQLiteError>{
+        let album_path = album.to_str().unwrap().to_string();
+        let album_name = String::from(album.file_name().unwrap().to_str().unwrap());
+        let query = format!("INSERT INTO albums (path, name, year) VALUES ('{}', '{}', 2018);",
+            album_path, album_name);
+        info!(target: "MusicDatabase", "Inserting album {:?}", album.file_name().unwrap());
+        self.execute(&query)?;
         Ok(())
     }
 
-    fn save_performers(&mut self) -> Result<(), SQLiteError>{
-        for song in self.file_manager.songs() {
+    fn save_performer(&self, song: &MusicFile) -> Result<(), SQLiteError>{
             let performer = match song.artist() {
                 Some(performer) => performer,
                 None => "Unknown",
@@ -138,11 +112,11 @@ impl MusicDatabase {
                 performer);
             info!(target: "MusicDatabase", "Inserting performer {:?}", performer);
             self.execute(&query)?;
-        }
         Ok(())
     }
 
-    fn save_song(&self, song: &MusicFile) -> Result<(), SQLiteError> {
+    pub fn save_song(&self, song: MusicFile) -> Result<(), SQLiteError> {
+        self.save_performer(&song);
         let values = self.song_as_values(&song);
         let title = match song.title() {
             Some(title) => title,

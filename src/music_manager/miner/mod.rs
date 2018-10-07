@@ -1,17 +1,18 @@
 extern crate dirs;
+pub mod music_file;
 
-use super::{music_file::MusicFile};
-use std::{io, path, fs, slice::Iter};
+use super::music_database::MusicDatabase;
+use self::music_file::MusicFile;
+use std::{io, path, fs};
 
-pub struct FileManager {
+pub struct Miner {
     directory: path::PathBuf,
-    music_files: Vec<MusicFile>,
-    albums: Vec<path::PathBuf>,
+    database: MusicDatabase,
 }
 
-impl FileManager {
+impl Miner {
 
-    pub fn new() -> FileManager {
+    pub fn new() -> Miner {
         let path;
         match get_default_music_folder_path() {
             Ok(path_buf) => {
@@ -23,69 +24,63 @@ impl FileManager {
             },
         };
 
-        FileManager {
+        let mut database = MusicDatabase::new();
+        database.connect().unwrap();
+        Miner {
             directory: path,
-            music_files: Vec::new(),
-            albums: Vec::new(),
+            database: database,
         }
-    }
-
-    pub fn songs(&self) -> Iter<MusicFile> {
-        self.music_files.iter()
-    }
-
-    pub fn albums(&self) -> Iter<path::PathBuf> {
-        self.albums.iter()
     }
 
     pub fn directory(&self) -> &path::PathBuf {
         &self.directory
     }
 
-    pub fn from_dir(directory: &str) -> FileManager {
+    pub fn from_dir(directory: &str) -> Miner {
         let mut path = path::PathBuf::new();
         path.push(directory);
-        FileManager {
+        let mut database = MusicDatabase::new();
+        database.connect().unwrap();
+        Miner {
             directory: path,
-            music_files: Vec::new(),
-            albums: Vec::new(),
+            database: database,
         }
     }
 
-    pub fn search_songs(&mut self) -> Result<(), io::Error> {
+    pub fn mine(&mut self) -> Result<(), io::Error> {
         let directory = self.directory.clone();
-        self.search_songs_from_dir(&directory)?;
+        self.mine_from_dir(&directory)?;
         Ok(())
     }
 
-    pub fn search_songs_from_dir(&mut self, directory: &path::Path) -> Result<(), io::Error> {
-        info!(target: "FileManager", "Searching songs in {:?}", directory);
+    pub fn mine_from_dir(&mut self, directory: &path::Path) -> Result<(), io::Error> {
+        info!(target: "Miner", "Searching songs in {:?}", directory);
         for entry in fs::read_dir(directory)? {
             let entry = entry?;
             let path = entry.path();
             if path.is_dir() {
-                self.albums.push(path.clone());
-                self.search_songs_from_dir(&path)?;
+                self.database.save_album(path.clone());
+                self.mine_from_dir(&path)?;
             }
             else {
-                self.save_file(entry);
+                self.save_song(entry);
             }
         }
         Ok(())
     }
 
-    fn save_file(&mut self, file: fs::DirEntry) {
+    fn save_song(&mut self, file: fs::DirEntry) {
         let path = file.path();
         let path_clone = path.clone();
 
         match path_clone.as_path().extension() {
             Some(extension) => {
                 if extension.eq("mp3") {
-                    info!(target: "FileManager", "Found song {:?}", path.clone());
-                    self.music_files.push(MusicFile::from_path(path));
+                    info!(target: "Miner", "Found song {:?}", path.clone());
+                    self.database.save_song(MusicFile::from_path(path));
                 }
                 else {
-                    info!(target: "FileManager", "Ignoring {:?}", path.clone());
+                    info!(target: "Miner", "Ignoring {:?}", path.clone());
                 }
             },
             None => {}
