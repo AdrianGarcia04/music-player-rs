@@ -17,3 +17,6 @@ Cargo.lock
 
 # Log files
 *.log
+
+# Database
+*.db
