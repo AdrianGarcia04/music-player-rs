@@ -71,11 +71,12 @@ impl MusicDatabase {
     }
 
     pub fn songs(&self) -> Vec<HashMap<&str, String>> {
-        let query = query_manager::select(
+        let mut query = query_manager::select(
             &[Rolas("title"), Rolas("genre"), Performers("name"), Albums("name")],
             &[Eq(Rolas("id_performer"), Performers("id_performer")), Eq(Rolas("id_album"),
                 Albums("id_album"))]
         );
+        query += " ORDER BY rolas.title ASC";
         let mut cursor = self.query(&query).unwrap();
         let mut songs = Vec::new();
         while let Some(row) = cursor.next().unwrap() {
@@ -220,6 +221,16 @@ impl MusicDatabase {
         );
         let mut cursor = self.query(&query).unwrap();
         cursor.next().unwrap().is_some()
+    }
+
+    pub fn search_songs(&self, query: &str) -> Vec<String>{
+        let mut cursor = self.query(&query).unwrap();
+        let mut songs = Vec::new();
+        while let Some(row) = cursor.next().unwrap() {
+            let title = row[0].as_string().unwrap();
+            songs.push(title.to_owned());
+        }
+        songs
     }
 
 }

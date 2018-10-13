@@ -54,6 +54,7 @@ pub fn create_database() -> Result<String, Error> {
 pub enum Conditional<'a> {
     Eq(TableColumn<'a>, TableColumn<'a>),
     EqVal(TableColumn<'a>, &'a str),
+    Like(TableColumn<'a>, &'a str),
 }
 
 impl <'a> ToString for Conditional<'a> {
@@ -61,6 +62,7 @@ impl <'a> ToString for Conditional<'a> {
         match self {
             Conditional::Eq(table1, table2) => format!("{} = {}", table1.to_string(), table2.to_string()),
             Conditional::EqVal(table, value) => format!("{} = '{}'", table.to_string(), value),
+            Conditional::Like(table, value) => format!("{} LIKE '%{}%'", table.to_string(), value),
         }
     }
 }

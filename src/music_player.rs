@@ -7,7 +7,11 @@ extern crate glib;
 use simplelog::{Level, LevelFilter, WriteLogger, Config};
 use std::{path::Path, fs::File, cell::RefCell, sync::mpsc};
 use clap::{Arg, App};
-use music_player_rs::music_manager::{miner::{Miner, MinerEvent}, music_database::MusicDatabase};
+use music_player_rs::music_manager::{
+    miner::{Miner, MinerEvent},
+    music_database::MusicDatabase,
+    search_manager::SearchManager
+};
 use gtk::prelude::*;
 use gtk::{WidgetExt, Inhibit, GtkWindowExt, ImageExt, TreeViewExt, TreeViewColumnExt,
     TreeViewColumn, GtkListStoreExtManual};
@@ -74,13 +78,9 @@ fn main() {
     let album_label: gtk::Label = builder.get_object("Album").unwrap();
     let artist_label: gtk::Label = builder.get_object("Artist").unwrap();
     let status_label: gtk::Label = builder.get_object("StatusLabel").unwrap();
-    let _prev_button: gtk::Button = builder.get_object("PrevButton").unwrap();
-    let _play_button: gtk::Button = builder.get_object("PlayButton").unwrap();
-    let _next_button: gtk::Button = builder.get_object("NextButton").unwrap();
     let _album_button: gtk::Button = builder.get_object("AlbumButton").unwrap();
     let _performer_button: gtk::Button = builder.get_object("PerformerButton").unwrap();
-    let _mine_button: gtk::Button = builder.get_object("MineButton").unwrap();
-    let _search_entry: gtk::SearchEntry = builder.get_object("SearchBar").unwrap();
+    let search_entry: gtk::SearchEntry = builder.get_object("SearchBar").unwrap();
 
     let mut miner = Miner::new();
     let listener = miner.get_listener();
@@ -93,7 +93,7 @@ fn main() {
         *global.borrow_mut() = Some((status_label, listener))
     });
 
-    let (tx_db, rx_db) = mpsc::channel();
+    let (tx_db, _rx_db) = mpsc::channel();
     std::thread::spawn(move || {
         loop {
             if let Ok(event) = listener_2.recv() {
@@ -104,6 +104,7 @@ fn main() {
                     MinerEvent::Finished => {
                         tx_db.send(true).unwrap();
                         glib::idle_add(database);
+                        break;
                     },
                     _ => {},
                 }
@@ -132,37 +133,59 @@ fn main() {
     let tree_view_clone = tree_view.clone();
     tree_view.connect_cursor_changed(move |_| {
         let tree_selection: gtk::TreeSelection = tree_view_clone.get_selection();
-        let (tree_model, tree_iter) = tree_selection.get_selected().unwrap();
-        let title_value = tree_model.get_value(&tree_iter, 0);
-        match title_value.get() {
-            Some(title) => {
-                title_label.set_text(title);
-            },
-            None => title_label.set_text("Unknown"),
-        };
-        let album_value = tree_model.get_value(&tree_iter, 1);
-        match album_value.get() {
-            Some(album) => {
-                album_label.set_text(album);
-            },
-            None => album_label.set_text("Unknown"),
-        };
-        let artist_value = tree_model.get_value(&tree_iter, 2);
-        match artist_value.get() {
-            Some(artist) => {
-                artist_label.set_text(artist);
-            },
-            None => artist_label.set_text("Unknown"),
-        };
+        if let Some((tree_model, tree_iter)) = tree_selection.get_selected() {
+            let title_value = tree_model.get_value(&tree_iter, 0);
+            match title_value.get() {
+                Some(title) => {
+                    title_label.set_text(title);
+                },
+                None => title_label.set_text("Unknown"),
+            };
+            let album_value = tree_model.get_value(&tree_iter, 1);
+            match album_value.get() {
+                Some(album) => {
+                    album_label.set_text(album);
+                },
+                None => album_label.set_text("Unknown"),
+            };
+            let artist_value = tree_model.get_value(&tree_iter, 2);
+            match artist_value.get() {
+                Some(artist) => {
+                    artist_label.set_text(artist);
+                },
+                None => artist_label.set_text("Unknown"),
+            };
+        }
     });
 
     let tree_view_ = tree_view.clone();
-    let list_store_ = list_store.clone();
+    let list_store_1 = list_store.clone();
     let mut music_database = MusicDatabase::new();
     music_database.connect().unwrap();
     DB.with(|db| {
-        *db.borrow_mut() = Some((list_store_, tree_view_, music_database))
+        *db.borrow_mut() = Some((list_store_1, tree_view_, music_database))
     });
+
+    let list_store_2 = list_store.clone();
+    search_entry.connect_search_changed(move |entry| {
+        let mut search_manager = SearchManager::new();
+        if let Some(query) = entry.get_text() {
+            search_manager.set_rules(&query);
+            let tree_filter = gtk::TreeModelFilter::new(&list_store_2, None);
+            tree_filter.set_visible_func(move |tree_model, tree_iter| {
+                if query.is_empty() {
+                    return true;
+                }
+                let title_value = tree_model.get_value(&tree_iter, 0);
+                match title_value.get::<String>() {
+                    Some(title) => search_manager.is_visible(&title),
+                    None => false,
+                }
+            });
+            tree_view.set_model(&tree_filter);
+        }
+    });
+
     gtk::main();
 }
 

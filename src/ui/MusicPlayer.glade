@@ -2,21 +2,6 @@
 <!-- Generated with glade 3.22.1 -->
 <interface>
   <requires lib="gtk+" version="3.20"/>
-  <object class="GtkImage" id="image1">
-    <property name="visible">True</property>
-    <property name="can_focus">False</property>
-    <property name="stock">gtk-media-previous</property>
-  </object>
-  <object class="GtkImage" id="image2">
-    <property name="visible">True</property>
-    <property name="can_focus">False</property>
-    <property name="stock">gtk-media-play</property>
-  </object>
-  <object class="GtkImage" id="image3">
-    <property name="visible">True</property>
-    <property name="can_focus">False</property>
-    <property name="stock">gtk-media-next</property>
-  </object>
   <object class="GtkImage" id="image4">
     <property name="visible">True</property>
     <property name="can_focus">False</property>
@@ -26,11 +11,6 @@
     <property name="visible">True</property>
     <property name="can_focus">False</property>
     <property name="stock">gtk-orientation-portrait</property>
-  </object>
-  <object class="GtkImage" id="image6">
-    <property name="visible">True</property>
-    <property name="can_focus">False</property>
-    <property name="stock">gtk-properties</property>
   </object>
   <object class="GtkWindow" id="MPWindow">
     <property name="can_focus">False</property>
@@ -56,54 +36,6 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="layout_style">start</property>
-                <child>
-                  <object class="GtkButton" id="PrevButton">
-                    <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="receives_default">True</property>
-                    <property name="image">image1</property>
-                    <property name="image_position">right</property>
-                    <property name="always_show_image">True</property>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">True</property>
-                    <property name="position">0</property>
-                    <property name="non_homogeneous">True</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkButton" id="PlayButton">
-                    <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="receives_default">True</property>
-                    <property name="image">image2</property>
-                    <property name="image_position">right</property>
-                    <property name="always_show_image">True</property>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">True</property>
-                    <property name="position">1</property>
-                    <property name="non_homogeneous">True</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkButton" id="NextButton">
-                    <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="receives_default">True</property>
-                    <property name="image">image3</property>
-                    <property name="image_position">right</property>
-                    <property name="always_show_image">True</property>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">True</property>
-                    <property name="position">2</property>
-                    <property name="non_homogeneous">True</property>
-                  </packing>
-                </child>
                 <child>
                   <object class="GtkButton" id="AlbumButton">
                     <property name="visible">True</property>
@@ -133,22 +65,6 @@
                     <property name="expand">False</property>
                     <property name="fill">True</property>
                     <property name="position">4</property>
-                    <property name="non_homogeneous">True</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkButton" id="MineButton">
-                    <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="receives_default">True</property>
-                    <property name="image">image6</property>
-                    <property name="image_position">right</property>
-                    <property name="always_show_image">True</property>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">True</property>
-                    <property name="position">5</property>
                     <property name="non_homogeneous">True</property>
                   </packing>
                 </child>
@@ -245,73 +161,22 @@
           <object class="GtkBox" id="FooterBox">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
+            <property name="margin_top">5</property>
+            <property name="margin_bottom">5</property>
             <property name="orientation">vertical</property>
             <child>
               <object class="GtkBox">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="margin_left">10</property>
-                <property name="margin_right">10</property>
-                <child>
-                  <object class="GtkLabel" id="TimeElapsed">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">0:00</property>
-                    <attributes>
-                      <attribute name="foreground" value="#d3d3d7d7cfcf"/>
-                    </attributes>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">True</property>
-                    <property name="position">0</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkProgressBar" id="ProgressBar">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="margin_top">3</property>
-                    <property name="margin_bottom">3</property>
-                  </object>
-                  <packing>
-                    <property name="expand">True</property>
-                    <property name="fill">True</property>
-                    <property name="position">1</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkLabel" id="Duration">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">--:--</property>
-                    <attributes>
-                      <attribute name="foreground" value="#d3d3d7d7cfcf"/>
-                    </attributes>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">True</property>
-                    <property name="position">2</property>
-                  </packing>
-                </child>
-              </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">0</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkBox">
-                <property name="visible">True</property>
-                <property name="can_focus">False</property>
-                <property name="homogeneous">True</property>
                 <child>
                   <object class="GtkImage" id="AlbumImage">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="halign">start</property>
+                    <property name="margin_left">5</property>
+                    <property name="margin_right">5</property>
+                    <property name="margin_top">5</property>
+                    <property name="margin_bottom">5</property>
                     <property name="icon_name">drive-optical</property>
                   </object>
                   <packing>
@@ -325,12 +190,14 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="halign">start</property>
+                    <property name="margin_left">15</property>
                     <property name="orientation">vertical</property>
                     <property name="homogeneous">True</property>
                     <child>
                       <object class="GtkLabel" id="Title">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
+                        <property name="halign">start</property>
                         <property name="label" translatable="yes">Title</property>
                         <attributes>
                           <attribute name="font-desc" value="Sans 12"/>
@@ -347,6 +214,7 @@
                       <object class="GtkLabel" id="Album">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
+                        <property name="halign">start</property>
                         <property name="label" translatable="yes">Album</property>
                         <attributes>
                           <attribute name="font-desc" value="Sans 10"/>
@@ -364,6 +232,7 @@
                       <object class="GtkLabel" id="Artist">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
+                        <property name="halign">start</property>
                         <property name="label" translatable="yes">Artist</property>
                         <attributes>
                           <attribute name="font-desc" value="Sans 10"/>
