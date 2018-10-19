@@ -79,7 +79,7 @@ fn main() {
     let artist_label: gtk::Label = builder.get_object("Artist").unwrap();
     let status_label: gtk::Label = builder.get_object("StatusLabel").unwrap();
     let _album_button: gtk::Button = builder.get_object("AlbumButton").unwrap();
-    let _performer_button: gtk::Button = builder.get_object("PerformerButton").unwrap();
+    let performer_button: gtk::Button = builder.get_object("PerformerButton").unwrap();
     let search_entry: gtk::SearchEntry = builder.get_object("SearchBar").unwrap();
 
     let mut miner = Miner::new();
@@ -130,9 +130,9 @@ fn main() {
     tree_view.expand_all();
     tree_view.set_model(&list_store);
 
-    let tree_view_clone = tree_view.clone();
+    let tree_view_1 = tree_view.clone();
     tree_view.connect_cursor_changed(move |_| {
-        let tree_selection: gtk::TreeSelection = tree_view_clone.get_selection();
+        let tree_selection: gtk::TreeSelection = tree_view_1.get_selection();
         if let Some((tree_model, tree_iter)) = tree_selection.get_selected() {
             let title_value = tree_model.get_value(&tree_iter, 0);
             match title_value.get() {
@@ -158,15 +158,16 @@ fn main() {
         }
     });
 
-    let tree_view_ = tree_view.clone();
+    let tree_view_2 = tree_view.clone();
     let list_store_1 = list_store.clone();
     let mut music_database = MusicDatabase::new();
     music_database.connect().unwrap();
     DB.with(|db| {
-        *db.borrow_mut() = Some((list_store_1, tree_view_, music_database))
+        *db.borrow_mut() = Some((list_store_1, tree_view_2, music_database))
     });
 
     let list_store_2 = list_store.clone();
+    let tree_view_3 = tree_view.clone();
     search_entry.connect_search_changed(move |entry| {
         let mut search_manager = SearchManager::new();
         if let Some(query) = entry.get_text() {
@@ -182,7 +183,34 @@ fn main() {
                     None => false,
                 }
             });
-            tree_view.set_model(&tree_filter);
+            tree_view_3.set_model(&tree_filter);
+        }
+    });
+
+    let dialog_glade = include_str!("ui/EditPerformer.glade");
+    let builder = gtk::Builder::new_from_string(dialog_glade);
+    let edit_performer_dialog: gtk::Dialog = builder.get_object("dialog").unwrap();
+    let stage_name_entry: gtk::Entry = builder.get_object("StageNameEntry").unwrap();
+    let real_name_entry: gtk::Entry = builder.get_object("RealNameEntry").unwrap();
+    let birth_entry: gtk::Entry = builder.get_object("BirthEntry").unwrap();
+    let death_entry: gtk::Entry = builder.get_object("DeathEntry").unwrap();
+
+    edit_performer_dialog.connect_delete_event(move |dialog, _| {
+        Inhibit(dialog.hide_on_delete())
+    });
+
+    let tree_view_4 = tree_view.clone();
+    performer_button.connect_clicked(move |_| {
+        let tree_selection: gtk::TreeSelection = tree_view_4.get_selection();
+        if let Some((tree_model, tree_iter)) = tree_selection.get_selected() {
+            edit_performer_dialog.show();
+            let artist_value = tree_model.get_value(&tree_iter, 1);
+            match artist_value.get::<String>() {
+                Some(artist) => {
+                    stage_name_entry.set_text(&artist);
+                },
+                None => stage_name_entry.set_text(""),
+            };
         }
     });
 
