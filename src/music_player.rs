@@ -31,7 +31,7 @@ fn receive_percentage() -> glib::Continue {
                     MinerEvent::Percentage(percentage) => {
                         let text = format!("Mining: {:.2}%", percentage*100.0);
                         label.set_text(&text);
-                        if percentage >= 1.0 {
+                        if percentage >= 0.95 {
                             label.set_text("");
                         }
                     },
@@ -78,8 +78,6 @@ fn main() {
     let album_label: gtk::Label = builder.get_object("Album").unwrap();
     let artist_label: gtk::Label = builder.get_object("Artist").unwrap();
     let status_label: gtk::Label = builder.get_object("StatusLabel").unwrap();
-    let _album_button: gtk::Button = builder.get_object("AlbumButton").unwrap();
-    let _performer_button: gtk::Button = builder.get_object("PerformerButton").unwrap();
     let search_entry: gtk::SearchEntry = builder.get_object("SearchBar").unwrap();
 
     let mut miner = Miner::new();
@@ -167,7 +165,7 @@ fn main() {
     });
 
     let list_store_2 = list_store.clone();
-    search_entry.connect_search_changed(move |entry| {
+    search_entry.connect_activate(move |entry| {
         let mut search_manager = SearchManager::new();
         if let Some(query) = entry.get_text() {
             search_manager.set_rules(&query);
