@@ -83,7 +83,7 @@ impl Miner {
             let entry = entry?;
             let path = entry.path();
             if path.is_dir() {
-                self.database.save_album(path.clone());
+                self.database.save_album(path.clone()).unwrap();
                 self.mine_from_dir(&path)?;
             }
             else {
@@ -106,7 +106,7 @@ impl Miner {
             Some(extension) => {
                 if extension.eq("mp3") {
                     info!(target: "Miner", "Found song {:?}", path.clone());
-                    self.database.save_song(MusicFile::from_path(path));
+                    self.database.save_song(MusicFile::from_path(path)).unwrap();
                 }
                 else {
                     info!(target: "Miner", "Ignoring {:?}", path.clone());

@@ -136,7 +136,7 @@ impl MusicDatabase {
         if self.song_in_database(&song) {
             return Ok(());
         }
-        self.save_performer(&song);
+        self.save_performer(&song)?;
         let values = self.song_as_values(&song);
         let title = match song.title() {
             Some(title) => title,
