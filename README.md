@@ -65,3 +65,6 @@ Album | _A:_
 Genre | _G:_
 
 For instance _T: title example_ is a valid query.
+
+## Known bugs
+* Error while reading id3v2.4 tags. Possible sol: change id3 library.
