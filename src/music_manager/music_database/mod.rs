@@ -13,6 +13,7 @@ use sqlite;
 
 type SQLiteError = sqlite::Error;
 
+/// A music database stores the connection to the SQLite database and its name.
 pub struct MusicDatabase {
     connection: Option<sqlite::Connection>,
     database: Option<String>,
@@ -20,6 +21,7 @@ pub struct MusicDatabase {
 
 impl MusicDatabase {
 
+    /// Creates a new instance of a music database.
     pub fn new() -> MusicDatabase {
         MusicDatabase {
             connection: None,
@@ -27,11 +29,14 @@ impl MusicDatabase {
         }
     }
 
+    /// Given a database name, creates a new instance of a music database, with the corresponding
+    /// SQLite database name.
     pub fn with_database(&mut self, database: &str) -> &mut MusicDatabase {
         self.database = Some(database.to_owned());
         self
     }
 
+    /// Tries to connect to the SQLite database.
     pub fn connect(&mut self) -> Result<(), SQLiteError> {
         let database = match self.database {
             Some(ref database) => &database[..],
@@ -48,7 +53,8 @@ impl MusicDatabase {
         Ok(())
     }
 
-    fn connection(&self) -> Result<&sqlite::Connection, SQLiteError> {
+    /// Returns the active connection, if exists.
+    pub fn connection(&self) -> Result<&sqlite::Connection, SQLiteError> {
         match self.connection {
             Some(ref connection) => Ok(connection),
             None => {
@@ -60,22 +66,26 @@ impl MusicDatabase {
         }
     }
 
+    /// Executes an SQL statement.
     pub fn execute(&self, query: &str) -> Result<(), SQLiteError> {
         let connection = self.connection()?;
         connection.execute(query)
     }
 
+    /// Executes an SQL statement, and returns the resulting rows.
     pub fn query(&self, query: &str) -> Result<sqlite::Cursor, SQLiteError> {
         let connection = self.connection()?;
         Ok(connection.prepare(query)?.cursor())
     }
 
+    /// Returns all the songs in database, following the order: title, performer, album and genre.
     pub fn songs(&self) -> Vec<HashMap<&str, String>> {
-        let query = query_manager::select(
+        let mut query = query_manager::select(
             &[Rolas("title"), Rolas("genre"), Performers("name"), Albums("name")],
             &[Eq(Rolas("id_performer"), Performers("id_performer")), Eq(Rolas("id_album"),
                 Albums("id_album"))]
         );
+        query += " ORDER BY rolas.title ASC";
         let mut cursor = self.query(&query).unwrap();
         let mut songs = Vec::new();
         while let Some(row) = cursor.next().unwrap() {
@@ -93,6 +103,7 @@ impl MusicDatabase {
         songs
     }
 
+    /// Given an album path, creates a new album entry in the database.
     pub fn save_album(&mut self, album: path::PathBuf) -> Result<(), SQLiteError> {
         if self.album_in_database(&album) {
             return Ok(());
@@ -106,6 +117,7 @@ impl MusicDatabase {
         Ok(())
     }
 
+    /// Given a music file, creates a new performer entry in the database.
     fn save_performer(&self, song: &MusicFile) -> Result<(), SQLiteError>{
         let performer = match song.artist() {
             Some(performer) => performer,
@@ -118,11 +130,13 @@ impl MusicDatabase {
         Ok(())
     }
 
+    /// Given a music file, creates a new "rolas" entry in the database, storing it performer
+    /// and album.
     pub fn save_song(&self, song: MusicFile) -> Result<(), SQLiteError> {
         if self.song_in_database(&song) {
             return Ok(());
         }
-        self.save_performer(&song);
+        self.save_performer(&song)?;
         let values = self.song_as_values(&song);
         let title = match song.title() {
             Some(title) => title,
@@ -135,7 +149,8 @@ impl MusicDatabase {
         Ok(())
     }
 
-    fn song_as_values(&self, song: &MusicFile) -> String {
+    /// Given a music file, returns a string with all the values to be inserted in the database.
+    pub fn song_as_values(&self, song: &MusicFile) -> String {
         let performer = match song.artist() {
             Some(performer) => performer,
             None => "Unknown",
@@ -170,7 +185,9 @@ impl MusicDatabase {
         date_recorded.to_string(), genre)
     }
 
-    fn foreign_key(&self, table: &str, column: &str, column_value: &str) -> i64 {
+    /// Given the table, column and value, returns the corresponding row id.
+    /// If the value does not exists in database, it is inserted.
+    pub fn foreign_key(&self, table: &str, column: &str, column_value: &str) -> i64 {
         let column_query = format!("id_{}", table);
         let select_table = TC::from_str(table, &column_query).unwrap();
         let where_table_column = TC::from_str(table, column).unwrap();
@@ -186,7 +203,8 @@ impl MusicDatabase {
         }
     }
 
-    fn insert_and_get_id(&self, table: &str, column: &str, column_value: &str) -> i64 {
+    /// Given the table, column and value, creates the corresponding new entry in the database.
+    pub fn insert_and_get_id(&self, table: &str, column: &str, column_value: &str) -> i64 {
         let query = format!("INSERT INTO {}s ({}) VALUES ('{}');", table, column, column_value);
         self.execute(&query).unwrap();
         let query = format!("SELECT last_insert_rowid();");
@@ -199,7 +217,8 @@ impl MusicDatabase {
         }
     }
 
-    fn song_in_database(&self, song: &MusicFile) -> bool {
+    /// Checks if the given song exists in database.
+    pub fn song_in_database(&self, song: &MusicFile) -> bool {
         let title = match song.title() {
             Some(title) => title,
             None => "Unknown",
@@ -212,7 +231,8 @@ impl MusicDatabase {
         cursor.next().unwrap().is_some()
     }
 
-    fn album_in_database(&self, album: &path::PathBuf) -> bool {
+    /// Checks if the given album exists in database.
+    pub fn album_in_database(&self, album: &path::PathBuf) -> bool {
         let album_path = album.to_str().unwrap().to_string();
         let query = query_manager::select(
             &[Albums("id_album")],
@@ -220,6 +240,17 @@ impl MusicDatabase {
         );
         let mut cursor = self.query(&query).unwrap();
         cursor.next().unwrap().is_some()
+    }
+
+    /// Given an SQL statement, returns the resulting rows of the query as a strings vector.
+    pub fn search_songs(&self, query: &str) -> Vec<String>{
+        let mut cursor = self.query(&query).unwrap();
+        let mut songs = Vec::new();
+        while let Some(row) = cursor.next().unwrap() {
+            let title = row[0].as_string().unwrap();
+            songs.push(title.to_owned());
+        }
+        songs
     }
 
 }
